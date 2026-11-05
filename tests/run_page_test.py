@@ -62,7 +62,7 @@ def main():
                ("level: graded answer shows verdict", l.get("pill1") == "Partial"),
                ("level: answer saved as partial", l.get("verdict1") == "partial"),
                ("level: grade prompt has course and key", l.get("gradePromptHasCourse") is True),
-               ("level: no personal names in prompts", l.get("gradePromptClean") is True),
+               ("level: prompts use this student's name, no blanks", l.get("gradePromptClean") is True),
                ("level: skip saved", l.get("verdict2") == "skipped"),
                ("level: summary after last question", l.get("summary") == "Level complete"),
                ("level: checkpoint written", bool(l.get("checkpoint")))]

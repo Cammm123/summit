@@ -18,7 +18,7 @@ setTimeout(async()=>{
    R.pill1=(document.querySelector('.pill')||{}).textContent;
    R.verdict1=(window.__store['answers/2026-11-03_q1']||{}).verdict;
    R.gradePromptHasCourse=window.__prompts.some(p=>typeof p==='string'&&p.includes('Test Course')&&p.includes('Answer one.'));
-   R.gradePromptClean=!window.__prompts.some(p=>typeof p==='string'&&/Cameron|03-121|Carnegie/.test(p));
+   R.gradePromptClean=window.__prompts.every(p=>typeof p!=='string'||(p.includes('Sam')&&!/undefined|null/.test(p)));
    click('Next question');await wait(150);
    click('Skip, show me');await wait(400);
    R.verdict2=(window.__store['answers/2026-11-03_q2']||{}).verdict;

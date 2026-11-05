@@ -1,0 +1,22 @@
+{
+  "date": "2026-11-05",
+  "target": "Quiz 3",
+  "daysLeft": 4,
+  "why": "First day on Lecture 12, plus one review question.",
+  "primer": [
+    {"h": "Pulling cargo into the cell (receptor-mediated endocytosis)", "body": "Particles stick to receptors on the surface; an adaptor reads a signal on the receptor's tail and recruits a coat that bends the membrane into a pit (Lecture 12, slides 8-9)."}
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "tag": "Lecture 12",
+      "text": "Name the adaptor and the coat in receptor-mediated endocytosis, and say what each one does.",
+      "key": {
+        "mechanism": "The adaptor (AP2) binds the sorting signal on the receptor's cytosolic tail and recruits the coat (clathrin); clathrin subunits assemble into a curved cage that bends the membrane into a coated pit, which pinches off as a vesicle.",
+        "mustHave": ["AP2 reads the receptor's tail signal", "clathrin assembly bends the membrane"],
+        "traps": ["calling the coat COP2"],
+        "slides": "Lecture 12 slides 8-9"
+      }
+    }
+  ]
+}

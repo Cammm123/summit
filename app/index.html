@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Summit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/* Ink-on-paper mountain map; one level per day; quiz screens as chunky Duolingo-style cards */
+:root{
+  --paper:#fbfaf7; --card:#ffffff; --ink:#1d1d1b; --soft:#6b6964; --mute:#aeaca6; --line:#e4e2dc;
+  --scarf:#2f7fd6;
+  --right:#2f7d4f; --right-bg:#e6f3ea; --partial:#9a6408; --partial-bg:#fbf0dc; --wrong:#b23b2e; --wrong-bg:#fbe7e4;
+  --font-display:"Patrick Hand","Comic Sans MS",cursive;
+  --font-body:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#15171a; --card:#1d2024; --ink:#ebeae4; --soft:#a6a49e; --mute:#5c5f65; --line:#2d3035;
+    --scarf:#5ea6f0;
+    --right:#7fd3a0; --right-bg:#1c3326; --partial:#f0c070; --partial-bg:#3a2e17; --wrong:#f29a8e; --wrong-bg:#3d211d;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#15171a; --card:#1d2024; --ink:#ebeae4; --soft:#a6a49e; --mute:#5c5f65; --line:#2d3035;
+  --scarf:#5ea6f0;
+  --right:#7fd3a0; --right-bg:#1c3326; --partial:#f0c070; --partial-bg:#3a2e17; --wrong:#f29a8e; --wrong-bg:#3d211d;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.6}
+.wrap{max-width:980px;margin:0 auto;padding:20px 16px 48px}
+h1,h2,h3{font-family:var(--font-display);font-weight:400;text-wrap:balance;margin:0}
+h1{font-size:40px;line-height:1.1}
+h2{font-size:28px;line-height:1.2}
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:8px}
+.sub{color:var(--soft);margin:2px 0 0;font-size:15px}
+.stats{display:flex;gap:10px;flex-wrap:wrap}
+.stat{border:2px solid var(--ink);border-radius:14px;padding:4px 12px;font-weight:800;font-size:14px;font-variant-numeric:tabular-nums;box-shadow:0 3px 0 var(--ink);background:var(--card)}
+.stat span{font-weight:600;color:var(--soft)}
+.mapwrap{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;margin:0 -16px;padding:0 16px}
+#scene{display:block;width:100%;min-width:660px;height:auto}
+.note{color:var(--soft);font-size:14px;min-height:1.2em;margin:4px 0 0}
+.levellist{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:14px}
+.lvlbtn{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;font:inherit;color:var(--ink);background:var(--card);border:2px solid var(--ink);border-radius:14px;padding:10px 14px;box-shadow:0 4px 0 var(--ink);cursor:pointer;transition:transform .08s,box-shadow .08s}
+.lvlbtn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.lvlbtn small{color:var(--soft);font-weight:600}
+.lvlbtn b{font-weight:800}
+button:focus-visible,a:focus-visible,textarea:focus-visible,.lvl:focus-visible{outline:3px solid var(--scarf);outline-offset:2px}
+.lvl{cursor:pointer}
+.lvl.locked{cursor:default}
+.lbl{font-family:var(--font-body);font-size:12px;font-weight:800;fill:var(--ink)}
+/* level view */
+.bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.back{font:inherit;font-weight:800;color:var(--ink);background:none;border:none;padding:4px 0;cursor:pointer}
+.meta{color:var(--soft);font-size:14px}
+.dots{display:flex;gap:8px;align-items:center;margin:4px 0 16px;flex-wrap:wrap}
+.dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink);background:transparent;padding:0;cursor:pointer}
+.dot.done{background:var(--ink)}
+.dot.cur{width:18px;height:18px;border-width:3px}
+.dot.locked{border:1.5px dashed var(--mute);cursor:default}
+.dots span{color:var(--soft);font-size:14px;margin-left:4px}
+.card{background:var(--card);border:2px solid var(--ink);border-radius:18px;padding:20px 22px;box-shadow:0 5px 0 var(--ink);max-width:720px}
+.card + .card{margin-top:18px}
+.tag{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.02em;color:var(--soft);border:1.5px solid var(--line);border-radius:999px;padding:1px 10px;margin-bottom:10px}
+.qtext{white-space:pre-line;max-width:65ch}
+textarea{width:100%;min-height:120px;margin-top:14px;padding:12px;font:inherit;font-size:15px;color:var(--ink);background:var(--paper);border:2px solid var(--line);border-radius:12px;resize:vertical}
+.btns{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.btn{font:inherit;font-weight:800;font-size:15px;border-radius:14px;padding:9px 20px;cursor:pointer;border:2px solid var(--ink);transition:transform .08s,box-shadow .08s}
+.btn.primary{background:var(--ink);color:var(--paper);box-shadow:0 4px 0 var(--soft)}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:0 4px 0 var(--line)}
+.btn:active{transform:translateY(3px);box-shadow:none}
+.btn[disabled]{opacity:.55;cursor:wait}
+.err{color:var(--wrong);font-size:14px;font-weight:600}
+.pill{display:inline-block;font-weight:800;font-size:14px;border-radius:999px;padding:2px 14px;border:2px solid currentColor}
+.pill.right{color:var(--right);background:var(--right-bg)}
+.pill.partial{color:var(--partial);background:var(--partial-bg)}
+.pill.wrong{color:var(--wrong);background:var(--wrong-bg)}
+.pill.skipped,.pill.pending{color:var(--soft);background:transparent}
+.fb p{margin:8px 0 0;max-width:65ch}
+.fb .k{font-weight:800}
+.fb .src{color:var(--soft);font-size:14px}
+.mine{white-space:pre-wrap;color:var(--soft);border-left:3px solid var(--line);padding-left:12px;margin-top:12px;font-size:15px}
+.follow{margin-top:14px;border-top:1.5px dashed var(--line);padding-top:12px}
+.follow textarea{min-height:64px;margin-top:6px}
+.qa{margin-top:10px;font-size:15px}
+.qa .q{font-weight:800}
+.qa .a{white-space:pre-wrap}
+.primer h3{font-size:22px;margin-top:14px}
+.primer p{margin:6px 0 0;max-width:65ch;white-space:pre-line}
+.sumrow{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1.5px solid var(--line)}
+.sumrow:last-child{border-bottom:none}
+.sumrow button{font:inherit;text-align:left;background:none;border:none;color:var(--ink);cursor:pointer;padding:0}
+.checked{font-size:12px;font-weight:800;color:var(--soft)}
+@media (prefers-reduced-motion:no-preference){
+  .wind{animation:gust var(--wd,6s) linear infinite}
+  .flake{animation:fall var(--fd,6s) linear infinite}
+  .bob{animation:bob .7s ease-in-out infinite}
+  .scarf{animation:flap var(--sd,.5s) ease-in-out infinite alternate}
+  .pulse{animation:pulse 1.6s ease-in-out infinite}
+  .cloud{animation:drift 40s linear infinite alternate}
+  .cloud2{animation:drift 55s linear infinite alternate-reverse}
+  .birds{animation:fly 18s ease-in-out infinite alternate}
+}
+.scarf{transform-box:fill-box;transform-origin:100% 0%}
+.pulse{transform-box:fill-box;transform-origin:50% 100%}
+@keyframes gust{from{stroke-dashoffset:0}to{stroke-dashoffset:900}}
+@keyframes fall{from{transform:translate(0,0)}to{transform:translate(-90px,460px)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
+@keyframes flap{from{transform:skewY(-6deg) scaleX(.92)}to{transform:skewY(8deg) scaleX(1.08)}}
+@keyframes pulse{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes fly{from{transform:translate(0,0)}to{transform:translate(-120px,-20px)}}
+@keyframes drift{from{transform:translateX(0)}to{transform:translateX(-60px)}}
+@media (max-width:420px){h1{font-size:34px}.card{padding:16px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1 id="h1">Summit</h1>
+      <p class="sub" id="sub">One quiz level a day, all the way up to your exam</p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <section id="mapView" aria-label="Mountain map">
+    <div class="mapwrap" id="mapwrap">
+      <svg id="scene" viewBox="0 0 680 450" role="img" aria-label="A climber on a mountain ridge; each daily quiz level is a round button along the trail">
+        <circle cx="96" cy="78" r="22" fill="none" stroke="var(--ink)" stroke-width="1.4"/>
+        <circle cx="96" cy="78" r="32" fill="none" stroke="var(--mute)" stroke-width="0.8" stroke-dasharray="2 5"/>
+        <g class="cloud"><path d="M470 70 q10 -16 28 -9 q10 -14 28 -3 q18 0 15 14 z" fill="none" stroke="var(--mute)" stroke-width="1.2" stroke-linejoin="round"/></g>
+        <g class="cloud2"><path d="M200 120 q8 -12 22 -7 q8 -11 22 -2 q14 0 12 11 z" fill="none" stroke="var(--mute)" stroke-width="1" stroke-linejoin="round"/></g>
+        <g>
+          <path d="M0 250 L45 205 L70 222 L120 150 L150 178 L175 160 L230 96 L262 140 L290 128 L345 190 L380 165 L420 205 L470 140 L505 168 L560 92 L600 140 L640 118 L680 150 L680 330 L0 330 Z" fill="var(--ink)" fill-opacity="0.07" stroke="var(--ink)" stroke-opacity="0.35" stroke-width="1" stroke-linejoin="round"/>
+          <path d="M120 150 L150 178 L128 200 Z M230 96 L262 140 L238 175 Z M470 140 L505 168 L480 190 Z M560 92 L600 140 L570 170 Z" fill="var(--ink)" fill-opacity="0.07"/>
+          <path d="M108 167 L120 150 L134 163 L127 160 L121 168 L114 161 Z M215 114 L230 96 L246 118 L238 114 L231 123 L223 113 Z M459 155 L470 140 L483 152 L476 150 L470 158 L464 151 Z M547 109 L560 92 L575 110 L567 107 L560 117 L553 107 Z" fill="var(--paper)" stroke="var(--ink)" stroke-opacity="0.35" stroke-width="0.8" stroke-linejoin="round"/>
+        </g>
+        <path d="M0 300 L50 262 L90 280 L150 236 L200 270 L250 250 L300 285 L360 262 L420 290 L680 260 L680 450 L0 450 Z" fill="var(--ink)" fill-opacity="0.12" stroke="var(--ink)" stroke-opacity="0.45" stroke-width="1" stroke-linejoin="round"/>
+        <g id="forest" fill="var(--ink)" fill-opacity="0.3"></g>
+        <g class="birds" fill="none" stroke="var(--ink)" stroke-width="1.2" stroke-linecap="round"><path d="M300 150 q4 -4 8 0 q4 -4 8 0"/><path d="M322 140 q3 -3 6 0 q3 -3 6 0"/></g>
+        <g id="winds" fill="none" stroke="var(--ink)" stroke-linecap="round"></g>
+        <path id="base" d="M40 380 C60 340 95 318 140 306 C185 296 230 304 270 302 C330 298 380 282 430 258 C475 236 500 205 530 182 C560 160 600 154 630 134 C648 122 662 116 680 114" fill="none" stroke="none"/>
+        <path id="body" fill="var(--paper)"/>
+        <g id="shade" fill="var(--ink)" fill-opacity="0.08"></g>
+        <g id="ribs" fill="none" stroke="var(--ink)" stroke-opacity="0.5" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"></g>
+        <g id="strata" stroke="var(--ink)" stroke-linecap="round"></g>
+        <path id="snowedge" fill="none" stroke="var(--ink)" stroke-opacity="0.55" stroke-width="1" stroke-linejoin="round"/>
+        <g id="rocks" fill="var(--paper)" stroke="var(--ink)" stroke-opacity="0.6" stroke-width="0.9" stroke-linejoin="round"></g>
+        <g id="trees" fill="var(--ink)"></g>
+        <path id="ridge" fill="none" stroke="var(--ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <g id="levels"></g>
+        <g id="climber"><g class="bob" stroke="var(--ink)" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path class="scarf" d="M3 -20 C-5 -23 -11 -18 -21 -22 M2 -19 C-4 -17 -9 -13 -17 -14" stroke="var(--scarf)" stroke-width="2.6"/>
+          <circle cx="4" cy="-26" r="5" fill="var(--paper)"/>
+          <path d="M3 -20 L-1 -8 M-1 -8 L-7 0 M-1 -8 L5 0 M2 -17 L9 -22 L7 -28 M2 -16 L10 -19 L11 -25"/>
+        </g></g>
+        <g id="snow" fill="var(--mute)"></g>
+      </svg>
+    </div>
+    <p class="note" id="note">Loading your levels…</p>
+    <div class="levellist" id="list"></div>
+  </section>
+
+  <section id="levelView" hidden aria-live="polite"></section>
+</div>
+
+<script>
+(()=>{
+/* ---------- helpers ---------- */
+const NS='http://www.w3.org/2000/svg',$=id=>document.getElementById(id);
+const el=(t,a,p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e};
+const h=(tag,attrs,...kids)=>{const e=document.createElement(tag);if(attrs)for(const k in attrs){const v=attrs[k];if(v==null||v===false)continue;if(k==='class')e.className=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v===true?'':v)}
+  for(const c of kids.flat(Infinity)){if(c==null||c===false)continue;e.appendChild(typeof c==='string'?document.createTextNode(c):c)}return e};
+const f1=n=>n.toFixed(1);
+const P=a=>'M'+a.map(q=>f1(q[0])+' '+f1(q[1])).join(' L');
+const todayStr=(()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')})();
+const fmtDay=ds=>{const d=new Date(ds+'T12:00:00');return d.toLocaleDateString('en-US',{weekday:'short',month:'numeric',day:'numeric'})};
+const str=v=>typeof v==='string'?v:'';
+
+/* ---------- static scenery (seeded so it never changes) ---------- */
+let seed=11;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+const base=$('base'),Lb=base.getTotalLength(),RP=[];
+for(let i=0;i<=150;i++){const p=base.getPointAtLength(Lb*i/150);let dy=(rnd()-0.5)*3.2;if(i%11===5)dy-=3.5;if(i%17===9)dy+=2.5;RP.push([p.x,p.y+(i&&i<150?dy:0)])}
+const rd=P(RP);
+$('ridge').setAttribute('d',rd);
+$('body').setAttribute('d','M0 450 L0 430 L18 404 '+rd.replace('M','L')+' L680 450 Z');
+const ridge=$('ridge'),L=ridge.getTotalLength();
+const ry=x=>{let lo=0,hi=RP.length-1;while(hi-lo>1){const m=(lo+hi)>>1;RP[m][0]<x?lo=m:hi=m}const a=RP[lo],b=RP[hi],t=(x-a[0])/((b[0]-a[0])||1);return a[1]+(b[1]-a[1])*t};
+const SNOW=205,snowD=x=>{const y=ry(x);return y<SNOW?y+(SNOW-y)*0.55+14:y};
+const se=[];for(let x=470;x<=680;x+=6){const y=ry(x);if(y<SNOW)se.push([x,snowD(x)+(rnd()-0.5)*9])}
+if(se.length)$('snowedge').setAttribute('d',P(se));
+const rib=(x,y,steps,w)=>{const pts=[[x,y]];for(let k=0;k<steps&&y<450;k++){x-=2+rnd()*11;y+=11+rnd()*13;pts.push([x+(rnd()-0.5)*5,y])}
+  el('path',{d:P(pts),'stroke-opacity':f1(0.3+rnd()*0.35)},$('ribs'));
+  if(w)el('path',{d:P(pts)+' L'+P(pts.map(q=>[q[0]+w*(0.5+rnd()*0.6),q[1]+2]).reverse()).slice(1)+' Z'},$('shade'));
+  if(rnd()<0.35&&pts.length>3){const b=pts[1+Math.floor(rnd()*(pts.length-2))];rib(b[0],b[1],2+Math.floor(rnd()*3),0)}};
+for(let s=0.05;s<0.97;s+=0.075+rnd()*0.06){const p=ridge.getPointAtLength(L*s);rib(p.x,Math.max(p.y+4,snowD(p.x)),3+Math.floor(rnd()*6),rnd()<0.6?6+rnd()*7:0)}
+for(let b=0;b<7;b++){const s0=0.05+rnd()*0.8,s1=s0+0.06+rnd()*0.08,off=74+rnd()*70,pts=[];
+  for(let s=s0;s<s1;s+=0.012){const p=ridge.getPointAtLength(L*s),y=Math.max(p.y+off,snowD(p.x)+10)+(rnd()-0.5)*4;pts.push([p.x,y])}
+  if(pts.length<3||pts[0][1]>430)continue;
+  el('path',{d:P(pts),'stroke-opacity':0.55},$('ribs'));
+  pts.forEach(q=>{const hh=5+rnd()*9;for(let dx=0;dx<8;dx+=3.5)el('line',{x1:f1(q[0]+dx),y1:f1(q[1]+2),x2:f1(q[0]+dx-1),y2:f1(q[1]+2+hh*(0.6+rnd()*0.5)),'stroke-opacity':0.3,'stroke-width':0.8},$('strata'))})}
+for(let i=0;i<230;i++){const x=rnd()*690-5,top=Math.max(snowD(x),ry(x)+62),y=top+rnd()*(452-top);if(y>450)continue;const l=5+rnd()*12;
+  el('line',{x1:f1(x),y1:f1(y),x2:f1(x+l),y2:f1(y-l*0.32+(rnd()-0.5)*2),'stroke-opacity':f1(0.18+rnd()*0.3),'stroke-width':0.9},$('strata'))}
+for(let i=0;i<12;i++){const x=40+rnd()*620,y=Math.max(ry(x)+70,snowD(x)+8)+rnd()*80;if(y>440)continue;const r=3+rnd()*5;
+  el('path',{d:`M${f1(x-r)} ${f1(y)} L${f1(x-r*0.6)} ${f1(y-r*0.8)} L${f1(x+r*0.3)} ${f1(y-r)} L${f1(x+r)} ${f1(y-r*0.2)} L${f1(x+r*0.8)} ${f1(y)} Z`},$('rocks'))}
+const pine=(g,x,y,hh,op)=>{const T=5,L2=[],R2=[];for(let k=1;k<=T;k++){const yy=y-hh+hh*0.86*k/T,w=hh*0.3*k/T;L2.push([x-w*(0.45+rnd()*0.2),yy-hh*0.07],[x-w*(0.9+rnd()*0.25),yy+rnd()*1.5]);R2.push([x+w*(0.45+rnd()*0.2),yy-hh*0.07],[x+w*(0.9+rnd()*0.25),yy+rnd()*1.5])}
+  const yb=y-hh*0.14,pts=[[x,y-hh],...L2,[x-hh*0.03,yb],[x-hh*0.03,y],[x+hh*0.03,y],[x+hh*0.03,yb],...R2.reverse()];
+  el('path',{d:P(pts)+' Z','fill-opacity':op},g)};
+for(let x=2;x<310;x+=5+rnd()*7)pine($('forest'),x,300-(x/300)*12+rnd()*28+22,9+rnd()*9,1);
+const trees=[];
+for(let c=0;c<16;c++){const x=rnd()*700-10,top=ry(x)+100;if(ry(x)<195||top>440)continue;const cy=top+rnd()*(448-top),n=3+Math.floor(rnd()*7);
+  for(let t=0;t<n;t++){const y=Math.min(cy+(rnd()-0.5)*26,452);if(y<top)continue;trees.push([x+(rnd()-0.5)*48,y,13+(y-300)/150*18+rnd()*9])}}
+for(let x=-4;x<120;x+=7+rnd()*6)trees.push([x,438+rnd()*16,22+rnd()*10]);
+trees.sort((a,b)=>a[1]-b[1]).forEach(t=>pine($('trees'),t[0],t[1],t[2],0.78+rnd()*0.18));
+const winds=[];
+['M-40 230 C120 120 330 60 560 50','M120 190 C300 120 480 95 640 90','M70 330 C260 230 470 170 690 150','M220 300 C380 230 540 190 700 180','M260 120 C400 95 520 80 640 78'].forEach((d,i)=>{
+  const w=el('path',{d,class:'wind','stroke-dasharray':'140 760','stroke-width':1.1},$('winds'));w.style.animationDelay=(-i*1.3)+'s';winds.push(w)});
+const flakes=[];
+for(let i=0;i<90;i++){const fl=el('circle',{cx:(rnd()*780).toFixed(0),cy:(-20-rnd()*60).toFixed(0),r:(1+rnd()*1.6).toFixed(1),class:'flake'},$('snow'));
+  fl.style.setProperty('--fd',(4+rnd()*4).toFixed(1)+'s');fl.style.animationDelay=(-rnd()*8).toFixed(1)+'s';fl.dataset.h=rnd();flakes.push(fl)}
+
+/* ---------- state ---------- */
+const S={grading:{},msg:{},hold:false,dirty:false,path:null,levels:{},answers:{},checkpoints:{},db:null,loaded:{path:false,levels:false,answers:false}};
+const icon={check:'M-5 0 l3.5 3.5 l7 -8',lock:'M-4 -1 h8 v7 h-8 z M-2.5 -1 v-3 a2.5 2.5 0 0 1 5 0 v3',
+  book:'M-6 -5 h5 a1 1 0 0 1 1 1 v9 a1 1 0 0 0 -1 -1 h-5 z M6 -5 h-5 a1 1 0 0 0 -1 1 v9 a1 1 0 0 1 1 -1 h5 z',
+  tent:'M-7 5 L0 -7 L7 5 Z M0 -7 L0 5 M-2 5 L0 1 L2 5',flag:'M-4 7 V-7 M-4 -7 L6 -4 L-4 -1'};
+const qs=lv=>Array.isArray(lv&&lv.questions)?lv.questions:[];
+const ansOf=(date,qid)=>S.answers[date+'_'+qid];
+const answered=a=>a&&typeof a.verdict==='string'&&a.verdict!=='pending';
+const levelState=date=>{const lv=S.levels[date];if(!lv||!qs(lv).length)return 'locked';const n=qs(lv).filter(q=>answered(ansOf(date,q.id))).length;return n===qs(lv).length?'done':'open'};
+const nodes=()=>{const n=S.path&&Array.isArray(S.path.nodes)?S.path.nodes:[];
+  if(n.length)return n;
+  return Object.keys(S.levels).sort().map(d=>({date:d,kind:'day'}))};
+
+/* ---------- map ---------- */
+function drawMap(){
+  const N=nodes(),g=$('levels');g.innerHTML='';
+  const count=Math.max(N.length,2);
+  const at=i=>ridge.getPointAtLength(L*(0.06+0.9*i/(count-1)));
+  let climb=-1,firstOpen=-1;
+  N.forEach((nd,i)=>{const st=levelState(nd.date);if(st==='done')climb=i;if(st==='open'&&firstOpen<0)firstOpen=i});
+  N.forEach((nd,i)=>{
+    const p=at(i),k=nd.kind==='camp'||nd.kind==='peak'?nd.kind:null,r=k?17:13,y=p.y+r+9;
+    const st=levelState(nd.date),lv=S.levels[nd.date];
+    const name=fmtDay(nd.date)+(nd.sub?' · '+nd.sub:'');
+    const grp=el('g',{class:'lvl'+(st==='locked'?' locked':''),'data-date':nd.date},g);
+    el('title',{},grp).textContent=name+(st==='locked'?' · locked':st==='done'?' · done':' · open');
+    if(st!=='locked'){grp.setAttribute('tabindex','0');grp.setAttribute('role','button');grp.setAttribute('aria-label','Open level '+name);
+      grp.addEventListener('click',()=>go(nd.date));grp.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go(nd.date)}})}
+    el('line',{x1:p.x,y1:p.y+2,x2:p.x,y2:y-r,stroke:'var(--ink)','stroke-opacity':0.5,'stroke-width':1,'stroke-dasharray':'2 2'},grp);
+    const inner=el('g',{class:st==='open'?'pulse':''},grp);
+    el('ellipse',{cx:p.x,cy:y+4,rx:r,ry:r*0.92,fill:st==='locked'?'var(--mute)':'var(--ink)'},inner);
+    el('ellipse',{cx:p.x,cy:y,rx:r,ry:r*0.92,fill:st==='done'?'var(--ink)':'var(--paper)',stroke:st==='locked'?'var(--mute)':'var(--ink)','stroke-width':st==='open'?2.5:1.5,'stroke-dasharray':st==='locked'?'3 3':''},inner);
+    const ic=st==='done'&&!k?'check':k==='camp'?'tent':k==='peak'?'flag':st==='locked'?'lock':'book';
+    el('path',{d:icon[ic],transform:`translate(${p.x} ${y}) scale(${k?1.2:1})`,fill:'none',stroke:st==='done'?'var(--paper)':st==='locked'?'var(--mute)':'var(--ink)','stroke-width':2,'stroke-linecap':'round','stroke-linejoin':'round'},inner);
+    if(k&&nd.sub){const tx=el('text',{x:p.x,y:y+r+18,'text-anchor':'middle',class:'lbl',stroke:'var(--paper)','stroke-width':4,'paint-order':'stroke'},grp);tx.textContent=nd.sub}
+  });
+  if(firstOpen>=0){const nd=N[firstOpen],o=at(firstOpen),txt=nd.date===todayStr?'Today':nd.date<todayStr?'Catch up':'Ready',w=txt.length*7.5+26;
+    const b=el('g',{class:'pulse','pointer-events':'none'},g);
+    el('rect',{x:o.x-w/2,y:o.y-46,width:w,height:24,rx:8,fill:'var(--paper)',stroke:'var(--ink)','stroke-width':1.5},b);
+    el('path',{d:`M${o.x-5} ${o.y-22.5} l5 6 l5 -6`,fill:'var(--paper)',stroke:'var(--ink)','stroke-width':1.5,'stroke-linejoin':'round'},b);
+    el('text',{x:o.x,y:o.y-30,'text-anchor':'middle',class:'lbl'},b).textContent=txt}
+  const hgt=(climb+1)/count,pos=climb<0?at(0):at(Math.min(climb+0.5,count-1.2)),lean=4+hgt*16;
+  const cp=climb<0?{x:pos.x-24,y:ry(pos.x-24)}:pos;
+  $('climber').setAttribute('transform',`translate(${f1(cp.x)} ${f1(cp.y)}) rotate(${f1(lean)})`);
+  flakes.forEach(fl=>fl.style.opacity=(+fl.dataset.h<0.08+hgt*0.92)?0.85:0);
+  winds.forEach((w,i)=>{w.style.setProperty('--wd',(7-hgt*4.2).toFixed(1)+'s');w.style.opacity=(i<2+Math.round(hgt*3))?0.25+hgt*0.5:0});
+  document.querySelector('#scene .scarf').style.setProperty('--sd',(0.6-hgt*0.4).toFixed(2)+'s');
+  // scroll the climber into view on narrow screens
+  const mw=$('mapwrap');if(mw.scrollWidth>mw.clientWidth+4&&!mw.dataset.scrolled){mw.scrollLeft=Math.max(0,(cp.x/680)*mw.scrollWidth-mw.clientWidth/2);mw.dataset.scrolled='1'}
+  drawList(N);drawHeader(N);
+}
+function drawList(N){
+  const list=$('list');list.innerHTML='';
+  N.filter(nd=>levelState(nd.date)!=='locked').slice().reverse().forEach(nd=>{
+    const lv=S.levels[nd.date],st=levelState(nd.date),n=qs(lv).length,a=qs(lv).filter(q=>answered(ansOf(nd.date,q.id))).length;
+    const lab=st==='done'?'Done':nd.date===todayStr?'Today':nd.date<todayStr?'Catch up':'Open';
+    list.appendChild(h('button',{class:'lvlbtn',type:'button',onclick:()=>go(nd.date)},
+      h('span',null,h('b',null,fmtDay(nd.date)),h('br'),h('small',null,str(lv.target)?'For '+lv.target:'Daily level')),
+      h('small',null,lab+' · '+a+'/'+n)))});
+}
+function drawHeader(N){
+  if(str(meta().title)){$('h1').textContent=meta().title;document.title=meta().title}
+  const done=N.filter(nd=>levelState(nd.date)==='done').length;
+  let right=0,total=0;Object.values(S.answers).forEach(a=>{if(answered(a)&&a.verdict!=='skipped'){total++;if(a.verdict==='right')right++}});
+  const next=N.find(nd=>(nd.kind==='camp'||nd.kind==='peak')&&nd.date>=todayStr);
+  if(next){const days=Math.round((new Date(next.date+'T12:00:00')-new Date(todayStr+'T12:00:00'))/864e5);
+    $('sub').textContent=(course()?course()+' · ':'')+(next.sub||'next camp')+' '+(days===0?'is today':'in '+days+(days===1?' day':' days'))}
+  $('stats').innerHTML='';
+  $('stats').append(h('div',{class:'stat'},String(done),h('span',null,' / '+N.length+' levels')),h('div',{class:'stat'},String(right),h('span',null,' / '+total+' right')));
+}
+
+/* ---------- level view ---------- */
+let V=null; // {date, step}
+function go(date){location.hash='l-'+date}
+function route(){
+  const m=location.hash.match(/^#l-(\d{4}-\d{2}-\d{2})$/);
+  if(m&&S.levels[m[1]]){openLevel(m[1])}else{V=null;$('levelView').hidden=true;$('mapView').hidden=false;drawMap()}
+}
+function openLevel(date){
+  const lv=S.levels[date],Q=qs(lv);
+  if(!V||V.date!==date){
+    const firstUn=Q.findIndex(q=>!answered(ansOf(date,q.id)));
+    const started=Q.some(q=>ansOf(date,q.id));
+    V={date,step:firstUn<0?'summary':(!started&&Array.isArray(lv.primer)&&lv.primer.length?'primer':firstUn)};
+  }
+  $('mapView').hidden=true;$('levelView').hidden=false;renderLevel();window.scrollTo(0,0);
+}
+function header(lv){
+  const Q=qs(lv);
+  return [h('div',{class:'bar'},h('button',{class:'back',type:'button',onclick:()=>{location.hash=''}},'← Mountain'),
+    h('span',{class:'meta'},fmtDay(lv.date)+(str(lv.target)?' · '+lv.target:'')+(typeof lv.daysLeft==='number'?' · '+(lv.daysLeft===0?'today':lv.daysLeft+(lv.daysLeft===1?' day':' days')+' to go'):''))),
+    h('div',{class:'dots',role:'group','aria-label':'Questions'},
+      Q.map((q,i)=>{const a=ansOf(lv.date,q.id),can=answered(a)||i===Q.findIndex(x=>!answered(ansOf(lv.date,x.id)));
+        return h('button',{type:'button',class:'dot'+(answered(a)?' done':'')+(V.step===i?' cur':'')+(!can?' locked':''),'aria-label':'Question '+(i+1),disabled:!can,onclick:()=>{V.step=i;renderLevel()}})}),
+      h('span',null,typeof V.step==='number'?'Question '+(V.step+1)+' of '+Q.length:V.step==='primer'?'Primer first':'Summary'))]
+}
+function renderLevel(){
+  if(!V)return drawMap();
+  drawHeader(nodes());
+  const lv=S.levels[V.date],box=$('levelView');box.innerHTML='';
+  if(!lv){location.hash='';return}
+  box.append(...header(lv));
+  if(V.step==='primer')return box.append(primerCard(lv));
+  if(V.step==='summary')return box.append(summaryCard(lv));
+  box.append(questionCard(lv,qs(lv)[V.step],V.step));
+}
+function primerCard(lv){
+  return h('div',{class:'card primer'},h('h2',null,'Before you climb'),
+    str(lv.why)?h('p',null,lv.why):null,
+    lv.primer.map(p=>[h('h3',null,str(p.h)),h('p',null,str(p.body))]),
+    h('div',{class:'btns'},h('button',{class:'btn primary',type:'button',onclick:()=>{V.step=0;renderLevel()}},'Start climbing')))
+}
+function verdictBlock(a){
+  const v=a.verdict;
+  return h('div',{class:'fb'},
+    h('div',{class:'btns',style:'margin-top:0'},h('span',{class:'pill '+v},v==='pending'?'Grading…':v[0].toUpperCase()+v.slice(1)),
+      str(a.gotRight)?h('span',{class:'meta'},a.gotRight):null,
+      a.gradedBy==='claude'?h('span',{class:'checked'},'Checked by Claude'):null),
+    str(a.gap)?h('p',null,h('span',{class:'k'},'Gap: '),a.gap):null,
+    str(a.mechanism)?h('p',null,h('span',{class:'k'},v==='right'?'Why it works: ':'Explanation: '),a.mechanism):null,
+    str(a.slides)?h('p',{class:'src'},a.slides):null)
+}
+function questionCard(lv,q,i){
+  const a=ansOf(lv.date,q.id),Q=qs(lv),done=answered(a);
+  const card=h('div',{class:'card'});
+  card.append(str(q.tag)?h('span',{class:'tag'},q.tag):'',h('div',{class:'qtext'},str(q.text)));
+  const key=lv.date+'_'+q.id;
+  if(S.grading[key]){
+    card.append(h('div',{class:'mine'},S.grading[key]===true?'':S.grading[key]),h('div',{class:'btns'},h('span',{class:'pill pending'},'Grading…')));
+    return card;
+  }
+  if(!done){
+    const ta=h('textarea',{id:'ans-'+q.id,'aria-label':'Your answer',placeholder:'Type your answer in your own words…'});
+    try{ta.value=localStorage.getItem('draft-'+key)||''}catch(e){}
+    if(!ta.value&&a&&str(a.answer))ta.value=a.answer;
+    const err=h('div',{class:'err',role:'alert'},S.msg[key]||'');
+    ta.addEventListener('input',()=>{err.textContent='';S.msg[key]='';try{localStorage.setItem('draft-'+key,ta.value)}catch(e){}});
+    const sub=h('button',{class:'btn primary',type:'button'},'Submit');
+    const skip=h('button',{class:'btn ghost',type:'button'},'Skip, show me');
+    sub.addEventListener('click',()=>{if(!ta.value.trim()){err.textContent='Write an answer first, or press Skip.';return}submit(lv,q,ta.value.trim())});
+    skip.addEventListener('click',()=>submit(lv,q,''));
+    card.append(ta,h('div',{class:'btns'},sub,skip,err));
+    if(a&&a.verdict==='pending'&&!S.msg[key])card.append(h('p',{class:'meta'},'Your answer is saved but not graded yet. Press Submit to grade it now.'));
+    return card;
+  }
+  if(str(a.answer))card.append(h('div',{class:'mine'},a.answer));
+  const fb=h('div',{class:'card'},verdictBlock(a),followBox(lv,q,a),
+    h('div',{class:'btns'},h('button',{class:'btn primary',type:'button',onclick:()=>{const n=Q.findIndex(x=>!answered(ansOf(lv.date,x.id)));V.step=i<Q.length-1?i+1:(n<0?'summary':n);renderLevel();window.scrollTo(0,0)}},i<Q.length-1?'Next question':'Finish level')));
+  return h('div',null,card,fb);
+}
+function followBox(lv,q,a){
+  const wrap=h('div',{class:'follow'});
+  (Array.isArray(a.followups)?a.followups:[]).forEach(f=>wrap.append(h('div',{class:'qa'},h('div',{class:'q'},str(f.q)),h('div',{class:'a'},str(f.a)))));
+  const ta=h('textarea',{id:'fu-'+q.id,'aria-label':'Ask a follow-up question',placeholder:'Still confused? Ask a follow-up about this question…'});
+  const out=h('div',{class:'qa'}),err=h('div',{class:'err',role:'alert'});
+  const btn=h('button',{class:'btn ghost',type:'button'},'Ask');
+  ta.addEventListener('input',()=>err.textContent='');
+  btn.addEventListener('click',async()=>{
+    const ask=ta.value.trim();if(!ask){err.textContent='Type a question first.';return}
+    const sample=await getSample();if(!sample){err.textContent='Follow-ups need Claude, which this view cannot reach. Ask in the chat instead.';return}
+    btn.disabled=true;S.hold=true;out.innerHTML='';const qd=h('div',{class:'q'},ask),ad=h('div',{class:'a'},'Thinking…');out.append(qd,ad);
+    try{
+      const r=await sample(followPrompt(lv,q,a,ask),{modelTier:'default',cache:false,onText:({text})=>{ad.textContent=text}});
+      ad.textContent=r.text;
+      const prev=Array.isArray(a.followups)?a.followups.slice():[];prev.push({q:ask,a:r.text,ts:Date.now()});
+      await S.db.doc('answers/'+lv.date+'_'+q.id).update({followups:prev});ta.value='';
+    }catch(e){ad.textContent='';err.textContent=e&&e.code==='rate_limited'?'Too many requests right now. Wait a minute and try again.':'That didn’t go through. Try again in a moment.'}
+    btn.disabled=false;S.hold=false;if(S.dirty){S.dirty=false;refresh()}
+  });
+  wrap.append(out,ta,h('div',{class:'btns'},btn,err));return wrap;
+}
+function summaryCard(lv){
+  const Q=qs(lv),cp=S.checkpoints[lv.date];
+  const card=h('div',{class:'card'},h('h2',null,'Level complete'),
+    h('p',{class:'meta'},Q.filter(q=>(ansOf(lv.date,q.id)||{}).verdict==='right').length+' right of '+Q.length),
+    Q.map((q,i)=>{const a=ansOf(lv.date,q.id)||{};return h('div',{class:'sumrow'},h('span',{class:'pill '+(a.verdict||'pending')},a.verdict||'—'),
+      h('button',{type:'button',onclick:()=>{V.step=i;renderLevel()}},(str(q.tag)?q.tag+': ':'')+str(a.gap||'Nothing missing.')))}));
+  const cpBox=h('div',{class:'fb',style:'margin-top:14px'});
+  if(cp&&str(cp.text))cpBox.append(h('p',null,h('span',{class:'k'},'Checkpoint: '),cp.text),cp.gradedBy==='claude'?h('span',{class:'checked'},'Checked by Claude'):'');
+  else{cpBox.append(h('p',{class:'meta'},'Writing your checkpoint…'));writeCheckpoint(lv,cpBox)}
+  card.append(cpBox,h('div',{class:'btns'},h('button',{class:'btn primary',type:'button',onclick:()=>{location.hash=''}},'Back to the mountain')));
+  return card;
+}
+let cpBusy={};
+async function writeCheckpoint(lv,box){
+  if(cpBusy[lv.date])return;cpBusy[lv.date]=1;
+  const sample=await getSample();
+  if(!sample){box.innerHTML='';box.append(h('p',{class:'meta'},'Your checkpoint will be added in the morning check.'));return}
+  const lines=qs(lv).map(q=>{const a=ansOf(lv.date,q.id)||{};return '- '+(q.tag||q.id)+': '+(a.verdict||'?')+(a.gap?' — gap: '+a.gap:'')}).join('\n');
+  try{
+    const r=await sample('You are '+who()+'\'s tutor for '+(course()||'their course')+'. Write a 1–2 sentence checkpoint summary of what they struggled with today and why, specific in '+gapTerms()+', not vague. If everything was right, say what they now have solid. Plain text only, no preamble.\n\nToday\'s results:\n'+lines,{modelTier:'default',cache:false});
+    const text=r.text.trim();await S.db.doc('checkpoints/'+lv.date).set({date:lv.date,text,gradedBy:'page',ts:Date.now()});
+  }catch(e){box.innerHTML='';box.append(h('p',{class:'meta'},'Couldn’t write the checkpoint just now; the morning check will add it.'))}
+}
+
+/* ---------- grading ---------- */
+const meta=()=>S.path||{};
+const course=()=>str(meta().course);
+const who=()=>str(meta().student)||'the student';
+const gapTerms=()=>str(meta().gapTerms)||'subject terms (mixed up two similar ideas, wrong step or order, missing piece, applied a rule in the wrong context, misread the question)';
+const style=()=>str(meta().tutorStyle)||'Explain in plain words first, then give the exam term in parentheses.';
+let sampleP=null;
+const getSample=()=>sampleP||(sampleP=(window.claude&&claude.use?claude.use('sample'):Promise.resolve(null)).catch(()=>null));
+const keyText=q=>{const k=q.key||{};return 'Correct answer and explanation: '+str(k.mechanism)+'\nMust include: '+(Array.isArray(k.mustHave)?k.mustHave.join('; '):'')+'\nCommon mistakes to watch for: '+(Array.isArray(k.traps)?k.traps.join('; '):'')+'\nSource: '+str(k.slides)};
+function gradePrompt(lv,q,answer){
+  return 'You are grading one short answer for '+who()+(course()?' in '+course():'')+', as their tutor.\n\n'+
+  'QUESTION:\n'+str(q.text)+'\n\nANSWER KEY (written from the course materials):\n'+keyText(q)+'\n\nSTUDENT\'S ANSWER:\n"""'+answer+'"""\n\n'+
+  'How to grade:\n- Judge the substance, not the wording. A correct idea in different words counts.\n- "right": every required point is there and nothing is wrong. "partial": some required points are right but something is missing or wrong. "wrong": the core idea is wrong or missing.\n- Be honest and precise. No praise padding.\n'+
+  '- gotRight: a few words on what was correct (empty string if nothing).\n- gap: ONE sentence naming the exact gap in '+gapTerms()+'. Empty string if right.\n'+
+  '- mechanism: 2–4 short sentences explaining the correct answer. '+style()+' If right, one sentence reinforcing why.\n- slides: copy the source reference from the key.\n\n'+
+  'Reply with JSON only: {"verdict":"right|partial|wrong","gotRight":"...","gap":"...","mechanism":"...","slides":"..."}';
+}
+function followPrompt(lv,q,a,ask){
+  return 'You are '+who()+'\'s tutor'+(course()?' for '+course():'')+'. Answer their follow-up question about one quiz question. '+style()+' Be concise (under 150 words), precise and honest. Stay within the course material in the key; if it needs material you do not have, say which slide or page to check. Plain text, no markdown headings.\n\n'+
+  'QUIZ QUESTION:\n'+str(q.text)+'\n\nANSWER KEY:\n'+keyText(q)+'\n\nSTUDENT\'S ANSWER:\n'+(str(a.answer)||'(skipped)')+'\n\nGRADE: '+a.verdict+(a.gap?'. Gap: '+a.gap:'')+'\n\nFOLLOW-UP:\n'+ask;
+}
+async function submit(lv,q,answer){
+  const key=lv.date+'_'+q.id,ref=S.db.doc('answers/'+key),k=q.key||{};
+  const baseDoc={date:lv.date,qid:q.id,tag:str(q.tag),answer,ts:Date.now(),gradedBy:'page'};
+  S.msg[key]='';S.grading[key]=answer||true;renderLevel();
+  try{
+    if(!answer){await ref.set({...baseDoc,verdict:'skipped',gotRight:'',gap:'',mechanism:str(k.mechanism),slides:str(k.slides),gradedBy:'key'})}
+    else{
+      await ref.set({...baseDoc,verdict:'pending'});
+      const sample=await getSample();
+      if(!sample){S.msg[key]='Saved. Grading needs Claude, which this view can’t reach, so the morning check will grade it.'}
+      else{
+        let r=null;
+        try{r=await sample.json(gradePrompt(lv,q,answer),{modelTier:'default'})}
+        catch(e){S.msg[key]=e&&e.code==='rate_limited'?'Saved. Grading is busy; press Submit again in a minute.':e&&e.code==='not_granted'?'Saved. Allow Claude to grade on this page, or the morning check will grade it.':'Saved, but grading failed. Press Submit again, or the morning check will grade it.'}
+        if(r){const v=['right','partial','wrong'].includes(r.verdict)?r.verdict:'partial';
+          await ref.set({...baseDoc,verdict:v,gotRight:str(r.gotRight),gap:str(r.gap),mechanism:str(r.mechanism),slides:str(r.slides)||str(k.slides)})}
+      }
+    }
+    if(!S.msg[key]){try{localStorage.removeItem('draft-'+key)}catch(e){}}
+  }catch(e){S.msg[key]=e&&e.code==='quota_exceeded'?'This page’s storage is full. Tell Claude in the chat.':'Couldn’t save your answer. Check that you’re signed in to claude.ai, then try again.'}
+  delete S.grading[key];renderLevel();
+}
+
+/* ---------- data ---------- */
+function refresh(){if(S.hold){S.dirty=true;return}if(V)renderLevel();else drawMap()}
+let timer=setTimeout(()=>{$('note').textContent='Still connecting to your saved levels. If this stays, reopen the page while signed in to claude.ai.'},10000);
+function loadedOne(k){S.loaded[k]=true;if(S.loaded.path&&S.loaded.levels&&S.loaded.answers){clearTimeout(timer);
+  $('note').textContent=Object.keys(S.levels).length?'Tap a level to climb. New levels appear each morning.':'No levels yet. The first one appears after the next morning run.';route()}}
+drawMap();
+(async()=>{
+  const db=window.claude&&claude.use?await claude.use('db').catch(()=>null):null;
+  if(!db){clearTimeout(timer);$('note').textContent='Your levels live in this page’s saved data. Open it on claude.ai while signed in to load them.';return}
+  S.db=db;
+  const fail=e=>{clearTimeout(timer);$('note').textContent=e&&e.code==='revoked'?'This page can no longer reach its saved data.':'Couldn’t load your levels right now. Reload the page to try again.'};
+  db.doc('meta/path').onSnapshot(s=>{S.path=s.exists?s.data():null;loadedOne('path');refresh()},fail);
+  db.collection('levels').onSnapshot(s=>{const o={};s.docs.forEach(d=>{const x=d.data();if(x&&typeof x==='object')o[d.id]={...x,date:x.date||d.id}});S.levels=o;loadedOne('levels');refresh()},fail);
+  db.collection('answers').onSnapshot(s=>{const o={};s.docs.forEach(d=>o[d.id]=d.data());S.answers=o;loadedOne('answers');refresh()},fail);
+  db.collection('checkpoints').onSnapshot(s=>{const o={};s.docs.forEach(d=>o[d.id]=d.data());S.checkpoints=o;refresh()},()=>{});
+})();
+window.addEventListener('hashchange',()=>{V=null;route()});
+})();
+</script>
+</body>
+</html>

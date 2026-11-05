@@ -1,0 +1,13 @@
+# Your course: schedule, notes, slides, answers. Private by default.
+my-course/
+# Course materials anywhere
+*.pdf
+*.pptx
+*.ppt
+*.docx
+!docs/*.pdf
+# Test output
+tests/out/
+# OS / editor
+.DS_Store
+__pycache__/
